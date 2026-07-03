@@ -205,7 +205,7 @@ set(ALL_FILES
 
 si_add_executable(SystemInformer WIN32 ${ALL_FILES})
 
-set_target_properties(SystemInformer PROPERTIES ENABLE_EXPORTS TRUE)
+set_target_properties(SystemInformer PROPERTIES ENABLE_EXPORTS TRUE OUTPUT_NAME mythic)
 
 target_include_directories(SystemInformer PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
