@@ -71,3 +71,27 @@ jobs:
       shell: cmd
       working-directory: ${{github.workspace}}
       run: build\build_cmake.cmd "${{ matrix.generator }}" ${{ matrix.configuration }} ${{ matrix.toolchain }} build
+
+    - name: Upload Release Artifacts (x86 32-bit)
+      if: matrix.configuration == 'Release' && matrix.toolchain == 'msvc-x86'
+      uses: actions/upload-artifact@v4
+      with:
+        name: mythic-msvc-x86-Release
+        path: bin-cmake/Release/mythic.exe
+        retention-days: 90
+
+    - name: Upload Release Artifacts (x64 64-bit)
+      if: matrix.configuration == 'Release' && matrix.toolchain == 'msvc-amd64'
+      uses: actions/upload-artifact@v4
+      with:
+        name: mythic-msvc-amd64-Release
+        path: bin-cmake/Release/mythic.exe
+        retention-days: 90
+
+    - name: Upload Release Artifacts (ARM64)
+      if: matrix.configuration == 'Release' && matrix.toolchain == 'msvc-arm64'
+      uses: actions/upload-artifact@v4
+      with:
+        name: mythic-msvc-arm64-Release
+        path: bin-cmake/Release/mythic.exe
+        retention-days: 90
