@@ -1,4 +1,4 @@
-name: 'cmake-continuous-integration'
+name: 'Conker Online - CI Build'
 
 on:
   workflow_dispatch:
@@ -17,23 +17,26 @@ jobs:
         os:
           - windows-latest
         toolchain:
-          - msvc-amd64
-          - msvc-arm64
-          - msvc-x86
-          - clang-msvc-amd64
-          - clang-msvc-arm64
-          - clang-msvc-x86
+          - msvc-amd64      # 64-bit (الأساسي)
+          - msvc-x86        # 32-bit (للتوافق)
         configuration:
-          - Debug
-          - Release
+          - Release         # نبني Release فقط عشان السرعة
         generator:
           - Ninja
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.configuration }} ${{ matrix.toolchain }}
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
 
+    # ===== إعداد البيئة =====
+    - name: Setup MSVC Environment
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: ${{ matrix.toolchain == 'msvc-amd64' && 'x64' || 'x86' }}
+
+    # ===== الكاشات =====
     - name: NuGet Cache
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # 5.0.5
       with:
@@ -48,6 +51,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: nuget restore .\packages.config -PackagesDirectory .\packages\
 
+    # ===== بناء الأدوات المخصصة =====
     - name: BuildTools Cache
       id: custombuildtool-cache
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # 5.0.5
@@ -62,6 +66,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: build\build_init.cmd
 
+    # ===== التوليد والبناء =====
     - name: Generate
       shell: cmd
       working-directory: ${{github.workspace}}
@@ -72,26 +77,36 @@ jobs:
       working-directory: ${{github.workspace}}
       run: build\build_cmake.cmd "${{ matrix.generator }}" ${{ matrix.configuration }} ${{ matrix.toolchain }} build
 
-    - name: Upload Release Artifacts (x86 32-bit)
-      if: matrix.configuration == 'Release' && matrix.toolchain == 'msvc-x86'
+    # ===== رفع الملفات النهائية =====
+    - name: Upload Artifacts (32-bit)
+      if: matrix.toolchain == 'msvc-x86'
       uses: actions/upload-artifact@v4
       with:
-        name: mythic-msvc-x86-Release
+        name: conker-online-32bit-Release
         path: bin-cmake/Release/mythic.exe
         retention-days: 90
 
-    - name: Upload Release Artifacts (x64 64-bit)
-      if: matrix.configuration == 'Release' && matrix.toolchain == 'msvc-amd64'
+    - name: Upload Artifacts (64-bit)
+      if: matrix.toolchain == 'msvc-amd64'
       uses: actions/upload-artifact@v4
       with:
-        name: mythic-msvc-amd64-Release
+        name: conker-online-64bit-Release
         path: bin-cmake/Release/mythic.exe
         retention-days: 90
 
-    - name: Upload Release Artifacts (ARM64)
-      if: matrix.configuration == 'Release' && matrix.toolchain == 'msvc-arm64'
+    # ===== (اختياري) تجميع المخرجات في ملف واحد ZIP =====
+    - name: Package Build Outputs
+      if: always()
+      shell: cmd
+      run: |
+        mkdir artifacts
+        copy bin-cmake\Release\mythic.exe artifacts\mythic-${{ matrix.toolchain }}.exe
+        7z a -tzip conker-build-${{ matrix.toolchain }}.zip artifacts/
+
+    - name: Upload ZIP Package
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: mythic-msvc-arm64-Release
-        path: bin-cmake/Release/mythic.exe
+        name: conker-package-${{ matrix.toolchain }}
+        path: conker-build-${{ matrix.toolchain }}.zip
         retention-days: 90
